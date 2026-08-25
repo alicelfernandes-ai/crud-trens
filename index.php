@@ -4,27 +4,29 @@ session_start();
 
 require 'conexao.php';
 
-if($SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['excluir_id'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['excluir_id'])) {
     $id = (int) $_POST['excluir_id'];
 
-    $stmt = $conexao->prepare('DELETE FROM trens WHERE id = ?');
+    $stmt = $conexao->prepare('DELETE FROM trens WHERE id_trem = ?');
     $stmt->bind_param('i', $id);
 
-    if($stmt->execute()){
+    if ($stmt->execute()) {
         $_SESSION['mensagem'] = 'Trem excluído com sucesso.';
 
         header('Location: index.php');
+
+        $stmt->close();
+    
         exit;
-    } else{
+    } else {
         $_SESSION['mensagem'] = 'Erro ao excluir o trem.';
 
         header('Location: index.php');
 
         $stmt->close();
-
+    
         exit;
     }
-
 }
 
 $mensagem = $_SESSION['mensagem'] ?? '';
@@ -32,7 +34,6 @@ unset($_SESSION['mensagem']);
 
 $resultado = $conexao->query('SELECT * FROM trens ORDER BY prefixo_trem');
 ?>
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 
@@ -46,10 +47,11 @@ $resultado = $conexao->query('SELECT * FROM trens ORDER BY prefixo_trem');
 <body>
     <div class="titulo">
         <h1>Frota Ferroviária</h1>
+        <a href="formulario.php" class="botao botao-primario">Novo trem</a>
     </div>
 
     <?php
-        if ($mnsagem !== '');
+        if ($mensagem !== ''):
     ?>
         <p class="aviso"><?= htmlspecialchars($mensagem) ?></p>
     <?php
@@ -89,7 +91,7 @@ $resultado = $conexao->query('SELECT * FROM trens ORDER BY prefixo_trem');
                             </span>
                         </td>
                         <td class="acoes">
-                            <a href="formulario.php?id=<? (int) $linha['id_trem'] ?>" class="botao botao-secundario">Editar</a>
+                            <a href="formulario.php?id=<?= (int) $linha['id_trem'] ?>" class="botao botao-secundario">Editar</a>
 
                             <form method="post" onsubmit="return confirm('Confirma a exclusão do trem?');">
                                 <input type="hidden" name="excluir_id" value="<?= (int) $linha['id_trem'] ?>">

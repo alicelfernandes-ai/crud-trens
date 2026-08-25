@@ -17,11 +17,11 @@ $situacoes = [
 ];
 $erros = [];
 
-if ($id > 0 && $_SERVER['REQUEST_METHOD'] === 'GET'){
-    $stmt-> $conexao->prepare('SELECT * FROM trens WHERE id_trem = ?');
+if ($id > 0 && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    $stmt = $conexao->prepare('SELECT * FROM trens WHERE id_trem = ?');
     $stmt->bind_param('i', $id);
     $stmt->execute();
-    $trem = $stmt-> get_result() -> fetch_assoc();
+    $trem = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
     if (!$trem) {
@@ -38,26 +38,73 @@ if ($id > 0 && $_SERVER['REQUEST_METHOD'] === 'GET'){
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $id = (int) $_POST['id'];
-        $prefixo = trim($_POST['prefixo']);
-        $modelo = trim($_POST['modelo']);
-        $ano_fabricacao = trim($_POST['ano_fabricacao']);
-        $capacidade_toneladas = trim($_POST['capacidade_toneladas']);
-        $situacao = $_POST['situacao'];
+    $id = (int) $_POST['id'];
+    $prefixo = trim($_POST['prefixo']);
+    $modelo = trim($_POST['modelo']);
+    $ano_fabricacao = trim($_POST['ano_fabricacao']);
+    $capacidade_toneladas = trim($_POST['capacidade_toneladas']);
+    $situacao = $_POST['situacao'];
 
-        if ($prefixo === '') {
-            $erros[] = 'Informe o modelo do trem.';
-        }
+    if ($prefixo === '') {
+        $erros[] = 'Informe o prefixo do trem.';
     }
+
+    if ($modelo === '') {
+        $erros[] = 'Informe o modelo do trem.';
+    }
+
+    if (!is_numeric($ano_fabricacao) || $ano_fabricacao < 1900 || $ano_fabricacao > 2100) {
+        $erros[] = 'Informe um ano de fabricação entre 1900 e 2100.';
+    }
+
+    if (!is_numeric($capacidade_toneladas) || $capacidade_toneladas < 0) {
+        $erros[] = 'Informe uma capacidade maior que zero.';
+    }
+
+    if (!isset($situacoes[$situacao])) {
+        $erros[] = 'Selecione uma situação válida.';
+    }
+
+    if (count($erros) === 0) {
+        $ano = (int) $ano_fabricacao;
+        $capacidade = (float) $capacidade_toneladas;
+
+        if ($id > 0) {
+            $stmt = $conexao->prepare('UPDATE trens SET prefixo_trem = ?, modelo_trem = ?, ano_fabricacao = ?, capacidade_toneladas = ?, situacao_trem = ? WHERE id_trem = ?');
+            $stmt->bind_param('ssidsi', $prefixo, $modelo, $ano, $capacidade, $situacao, $id);
+
+            if ($stmt->execute()) {
+                $_SESSION['mensagem'] = 'Trem atualizado com sucesso!';
+            } else {
+                $_SESSION['mensagem'] = 'Não foi possível realizar a atualização.';
+            }
+        } else {
+            $stmt = $conexao->prepare('INSERT INTO trens (prefixo_trem, modelo_trem, ano_fabricacao, capacidade_toneladas, situacao_trem) VALUES (?, ?, ?, ?, ?)');
+            $stmt->bind_param('ssids', $prefixo, $modelo, $ano, $capacidade, $situacao);
+
+            if ($stmt->execute()) {
+                $_SESSION['mensagem'] = 'Trem cadastrado com sucesso!';
+            } else {
+                $_SESSION['mensagem'] = 'Não foi possível realizar o cadastro.';
+            }
+        }
+
+        $stmt->close();
+        header('Location: index.php');
+        exit;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= $id > 0 ? 'Editar trem' : 'Novo trem' ?></title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <header>
         <h1>Frota Ferroviária</h1>
@@ -67,21 +114,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <h1><?= $id > 0 ? 'Editar trem' : 'Novo trem' ?></h1>
 
         <?php
-            if (count($erros) > 0):
+        if (count($erros) > 0):
         ?>
             <div class="aviso aviso-erro">
                 <ul>
                     <?php
-                        foreach ($erros as $item):
+                    foreach ($erros as $item):
                     ?>
                         <li><?= htmlspecialchars($item) ?></li>
                     <?php
-                        endforeach;
+                    endforeach;
                     ?>
                 </ul>
             </div>
         <?php
-            endif;
+        endif;
         ?>
     </main>
 
@@ -111,26 +158,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input type="number" id="capacidade_toneladas" name="capacidade_toneladas" step="0.01" min="0.01" value="<?= htmlspecialchars((string) $capacidade_toneladas) ?>">
             </div>
 
-            <div class="campo"> 
+            <div class="campo">
                 <label for="situacao">Situação</label>
-                <select name="situacao" name="situacao">
+                <select id="situacao" name="situacao">
                     <?php
-                        foreach($situacoes as $chave=> $rotulo):
+                    foreach ($situacoes as $chave => $rotulo):
                     ?>
                         <option value="<?= $chave ?>" <?= $chave === $situacao ? 'selected' : '' ?>>
                             <?= $rotulo ?>
                         </option>
-                        <?php
-                            endforeach;
-                        ?>
+                    <?php
+                    endforeach;
+                    ?>
                 </select>
             </div>
         </div>
 
         <div class="acoes">
-            <button type="submit" class="botao botao-primario"><?= $id> 0 ? 'Atualizar' : 'Cadastrar' ?></button>
+            <button type="submit" class="botao botao-primario"><?= $id > 0 ? 'Atualizar' : 'Cadastrar' ?></button>
             <a href="index.php" class="botao botao-secundario">Cancelar</a>
         </div>
     </form>
 </body>
+
 </html>
